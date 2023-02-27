@@ -54,7 +54,7 @@ def create_workspace(organization_name, workspace_name, api_token):
                     "auto-apply": True,
                     # use agent mode.  remove if we go back to remote mode later
                     "execution-mode": "agent",
-                    "agent-pool-id": "spore-tfc-agents"
+                    "agent-pool-id": "apool-KM8gYEFXitPdqKKG"
                 },
                 "type": "workspaces",
             }
