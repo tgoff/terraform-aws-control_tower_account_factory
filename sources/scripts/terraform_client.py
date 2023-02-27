@@ -52,6 +52,9 @@ def create_workspace(organization_name, workspace_name, api_token):
                     "name": workspace_name,
                     "terraform-version": TERRAFORM_VERSION,
                     "auto-apply": True,
+                    # use agent mode.  remove if we go back to remote mode later
+                    "execution-mode": "agent",
+                    "agent-pool-id": "spore-tfc-agents"
                 },
                 "type": "workspaces",
             }
