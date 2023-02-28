@@ -93,7 +93,13 @@ phases:
       - |
         if [[ ! -z "$CUSTOMIZATION" ]]; then 
           source $DEFAULT_PATH/aft-venv/bin/activate
-          if [ $TF_DISTRIBUTION = "oss" ]; then
+        if [[ ! -z "$CUSTOMIZATION" ]]; then 
+          source $DEFAULT_PATH/aft-venv/bin/activate
+          #if [ $TF_DISTRIBUTION = "oss" ]; then
+          
+          
+            TF_DISTRIBUTION="oss"
+
             TF_BACKEND_REGION=$(aws ssm get-parameter --name "/aft/config/oss-backend/primary-region" --query "Parameter.Value" --output text)
             TF_KMS_KEY_ID=$(aws ssm get-parameter --name "/aft/config/oss-backend/kms-key-id" --query "Parameter.Value" --output text)
             TF_DDB_TABLE=$(aws ssm get-parameter --name "/aft/config/oss-backend/table-id" --query "Parameter.Value" --output text)
@@ -115,8 +121,16 @@ phases:
             cd $DEFAULT_PATH/$CUSTOMIZATION/terraform
             export AWS_PROFILE=aft-management-admin
             /opt/aft/bin/terraform init -no-color
-            /opt/aft/bin/terraform apply -no-color --auto-approve
-          else
+            #/opt/aft/bin/terraform apply -no-color --auto-approve
+          #else
+          
+            /opt/aft/bin/terraform state pull > old.tfstate
+            rm backend.tf aft-providers.tf
+            TF_DISTRIBUTION="tfc"
+            unset AWS_PROFILE
+        
+          
+          
             TF_BACKEND_REGION=$(aws ssm get-parameter --name "/aft/config/oss-backend/primary-region" --query "Parameter.Value" --output text)
             TF_ORG_NAME=$(aws ssm get-parameter --name "/aft/config/terraform/org-name" --query "Parameter.Value" --output text)
             TF_TOKEN=$(aws ssm get-parameter --name "/aft/config/terraform/token" --with-decryption --query "Parameter.Value" --output text)
@@ -128,10 +142,25 @@ phases:
             for f in *.jinja; do jinja2 $f -D timestamp="$TIMESTAMP" -D provider_region=$CT_MGMT_REGION -D tf_distribution_type=$TF_DISTRIBUTION -D aft_admin_role_arn=$AFT_EXEC_ROLE_ARN -D target_admin_role_arn=$VENDED_EXEC_ROLE_ARN -D terraform_org_name=$TF_ORG_NAME -D terraform_workspace_name=$TF_WORKSPACE_NAME  >> ./$(basename $f .jinja).tf; done
             for f in *.tf; do echo "\n \n"; echo $f; cat $f; done
             
+            
+                     
+            cat >~/.terraformrc <<EOL
+            credentials "app.terraform.io" {
+              token = "${TF_TOKEN}"
+            }
+        EOL
+          
+            cd $DEFAULT_PATH/$CUSTOMIZATION/terraform
+            export AWS_PROFILE=aft-management-admin
+            yes | /opt/aft/bin/terraform init --migrate-state  
+            yes | /opt/aft/bin/terraform state push old.tfstate
+            unset AWS_PROFILE
+
+            
             cd $DEFAULT_PATH/$CUSTOMIZATION
             tar -czf temp_configuration_file.tar.gz -C terraform --exclude .git --exclude venv .
             python3 $DEFAULT_PATH/aws-aft-core-framework/sources/scripts/workspace_manager.py --operation "deploy" --organization_name $TF_ORG_NAME --workspace_name $TF_WORKSPACE_NAME --assume_role_arn $AFT_ADMIN_ROLE_ARN --assume_role_session_name $ROLE_SESSION_NAME --api_endpoint $TF_ENDPOINT --api_token $TF_TOKEN --terraform_version $TF_VERSION --config_file $TF_CONFIG_PATH
-          fi
+          #fi
         fi
   post_build:
     on-failure: ABORT
