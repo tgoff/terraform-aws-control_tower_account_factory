@@ -59,7 +59,9 @@ def create_workspace(organization_name, workspace_name, api_token):
                 "type": "workspaces",
             }
         }
+        print("Create workspace with payload: {}".format(payload))
         response = __post(endpoint, headers, payload)
+        print("Create workspace response: {}".format(response))
         return response["data"]["id"]
 
 
