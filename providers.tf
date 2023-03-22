@@ -5,6 +5,11 @@ provider "aws" {
   alias  = "ct_management"
   region = var.ct_home_region
   # The default profile or environment variables should authenticate to the Control Tower Management Account as Administrator
+  # Except we arent doing that so that we can try to run in TFC...
+  assume_role {
+    role_arn     = "arn:${data.aws_partition.current.partition}:iam::${var.ct_management_account_id}:role/AWSAFTExecution"
+    session_name = local.aft_session_name
+  }
   default_tags {
     tags = {
       managed_by = "AFT"
